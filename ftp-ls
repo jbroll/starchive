@@ -1,0 +1,66 @@
+#!/data/mmti/bin.linux/tclkit8.6
+#
+
+lappend auto_path /home/john/lib/tcllib-1.13/modules
+
+package require ftp
+
+proc dlist { ftp path args } {
+    set file [lindex $args 0]
+    set list [lrange $args 1 end]
+
+    if { [llength $list] } {
+	if { $list eq {{}} } { set list "" }
+
+	if { [regexp {\*} $file] } {
+	    foreach item [ftp::List $ftp] {
+		set name [lindex $item end]
+		set size [lindex $item end]
+		set mode [lindex $item 0]
+
+		switch [string index $mode 0] {
+		 d {
+		    if { $path eq {} } { set prefix $name 
+		    } else {		 set prefix $path/$name }
+
+		    ftp::Cd $ftp $name
+		    dlist $ftp $prefix {*}$list
+		    ftp::Cd $ftp ..
+		 }
+		 default {
+		 }
+		}
+	    }
+	} else {
+	    if { $path eq {} } { set prefix $file 
+	    } else {		 set prefix $path/$file }
+
+	    ftp::Cd $ftp $file
+	    dlist $ftp $prefix {*}$list
+	    ftp::Cd $ftp ..
+	}
+    } else {
+	if { $path eq {} } { set prefix {}
+	} else {	     set prefix $path/ }
+
+	foreach line [ftp::List $ftp {*}$file] {
+	    puts "[lrange $line 0 end-1] $prefix[lindex $line end]"
+	}
+    }
+}
+
+set path [lassign [split [lindex $argv 0] /] x y serv]
+
+lassign [split $serv :] user serv
+lassign [split $serv @] pass serv
+
+set ftp [ftp::Open $serv $user $pass]
+
+if { [llength $argv] eq 2 } {
+    ftp::Cd $ftp [join $path /]
+
+    set path [split [lindex $argv 1] /]
+}
+
+dlist $ftp {} {*}$path
+

@@ -1,0 +1,56 @@
+#!/usr/bin/env node
+
+var fs 	     = require("fs");
+
+var Starbase = require("./starbase");
+var strtod   = require("./strtod");
+
+
+
+function h2d(ra) {
+    return strtod(ra)*15;
+}
+
+function box(ra, dc, size) {
+	return  [[ (ra-size).toFixed(4), (dc-size).toFixed(4) ]
+		,[ (ra-size).toFixed(4), (dc+size).toFixed(4) ]
+		,[ (ra+size).toFixed(4), (dc+size).toFixed(4) ]
+		,[ (ra+size).toFixed(4), (dc-size).toFixed(4) ]]
+}
+ 
+var cda = new Starbase(fs.readFileSync("/dev/stdin").toString()
+		, { type: {
+			  ObsID:	Number
+			, RA_NOM:	h2d
+			, DEC_NOM:	strtod
+		  } });
+
+racol = cda['RA_NOM'];
+dccol = cda['DEC_NOM'];
+rtcol = cda['ROLL_NOM'];
+idcol = cda['ObsID'];
+
+var features = [];
+
+for ( i = 0; i < cda.data.length; i++ ) {
+  features[i] = 
+    {     "type": "Feature",
+	  "geometry": {
+		  "type": "Polygon"
+		, "coordinates": box(cda.data[i][dccol], cda.data[i][racol], 1)
+	}
+	, "properties": { "ObsID": cda.data[i][idcol]}
+    };
+}
+
+
+
+var geojson = {
+	  "type": "FeatureCollection"
+	, "features": features
+    };
+
+
+console.log(JSON.stringify(geojson, null, 4));
+
+

@@ -1,0 +1,134 @@
+#!/bin/sh
+#
+. cda.conf
+
+if [ "$1" = "" ] ; then
+    echo "usage: cda [command]"
+    echo
+    grep ")[^.]*#" $0 
+    echo
+    echo "    Config:"
+    echo
+    cat cda.conf | sed s/^/\\t/
+    echo
+    exit
+fi
+
+cmd=$1; shift
+
+Evt2="*/*/*/primary/*evt2.fits.gz"
+
+COLUMN="INSTRUME GRATING OBJECT RA_NOM DEC_NOM OBSERVER EXPOSURE Author TITLE"
+HEADER="ObsID ao cat evt2 date size full cntr $COLUMN"
+
+
+case $cmd in
+ header) 				# Display a FITS header from an ObsID
+	funhead `./cda fits $*` ;;
+ fits)					# Fetch a FITS file from and ObsID store it in ./data/
+    ./cda id db $*						|
+    (
+      read HEADER
+      read DASHES
+
+      while read $HEADER ; do
+	if [ ! -f data/$evt2 ] ; then
+	    echo fetch $evt2 1>&2
+	    wget -q -O- ftp://$Name:$Pass@$Serv/$Root/$ao/cat$cat/$ObsID/primary/$evt2 > data/$evt2
+	fi
+	echo data/$evt2
+      done
+    )
+    ;;
+
+ id)					# Return rows of the table matching ObsIds
+    db=$1; shift
+
+    echo ObsID - $* | sed -e 's/ /\n/g'  | search cda.$db ObsID
+    ;;
+
+ import-chandra.db)			# Import old chandra.db to new cda.db
+    < chandra.db						\
+    compute -v ARRDEL=/ '
+	.ObsID = root[8]
+	.ao    = root[6]
+	.cat   = substr(root[7], 4)
+    '								|
+    column $HEADER						|
+    sorttable -n -u ObsID					\
+    > cda.db
+
+    jointable -j evt2 						\
+	"| sorttable evt2 < cda.db"				\
+	"| sorttable evt2 < cda.evt2"				|
+    column "*_2=?" $HEADER					|
+    sorttable -n ObsID						|
+    overwrite cda.db
+
+    index -mi -n cda.db RA_NOM
+    index -mi -n cda.db DEC_NOM 
+    ;;
+
+ ls-evt2)				# Generate cda.evt2 table from ftp://
+    (
+	echo
+	echo
+	echo "ROOT	ftp://$Serv$Root"
+	echo
+	./ftp-ls ftp://$Name:$Pass@$Serv/$Root $Evt2		|
+	./ls-ltotable						|
+	compute -v ARRDEL=/ '
+	    .ObsID = name[3]
+	    .ao    = name[1]
+	    .cat   = substr(name[2], 4)
+	    .evt2  = name[5]		
+	'							|
+	column ObsID ao cat evt2 date size			\
+    ) > cda.evt2
+    ;;
+
+ update)				# Update cda.db from cda.evt2 and ftp://
+    if [ ! -f cda.db ] ; then
+	fldtotable $HEADER < /dev/null > cda.db
+    fi
+
+    jointable -j evt2 -a2					\
+	"| sorttable evt2 < cda.db"				\
+	"| sorttable -n -u ObsID < cda.evt2 | sorttable evt2"	|
+    compute '.update = ObsID_1 == "" ? 1 : 0'			|
+    column update "*_2=?" $HEADER				|
+    compute -v Root=ftp://$Name:$Pass@$Serv/$Root -v header="$COLUMN" -v sl="/" -v sq="'" '
+
+	if ( update ) { 
+
+	    print "update", ObsID > "/dev/stderr"
+
+	    root = Root sl ao sl "cat" cat sl ObsID "/primary"
+
+	    cmd = "ftp-ls " root " " sq "*_full_img2.fits.gz" sq " | ./ls-ltotable | headoff name"
+	    cmd | getline full
+	    close(cmd)
+
+	    cmd = "ftp-ls " root " " sq "*_cntr_img2.fits.gz" sq " | ./ls-ltotable | headoff name" 
+	    cmd | getline cntr
+	    close(cmd)
+
+	    wget = "wget -O - -q " root "/" evt2 " | gzip -q -d 2> /dev/null | fitsbase -e 1 stdin | compute \"RA_NOM  = d2h(RA_NOM); DEC_NOM += 0:00:00\" | headoff " header
+	    wget | getline line
+	    close(wget)
+
+	    print 0, ObsID, ao, cat, evt2, date, size, full, cntr, line
+	    next
+	}'							|
+    column $HEADER						|
+    sorttable -n ObsID						|
+    ./fixauthor							|
+    overwrite cda.db
+
+    index -mB -n cda.db ObsID
+    index -mi -n cda.db RA_NOM
+    index -mi -n cda.db DEC_NOM 
+    ;;
+
+esac
+

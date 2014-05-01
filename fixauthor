@@ -1,0 +1,38 @@
+#!/bin/sh
+#
+  compute 'OBSERVER=toupper(OBSERVER)
+	   gsub(" *(,|^PEOF[^ ]*|^PROF[^ ]*|^MR(\.)?|^DR(\.)?|^MISS) *", "", OBSERVER)
+	   gsub("^VAN SP.*", "LEON VANSPEYBROECK", OBSERVER)
+	   gsub("^MURRAY .*", "STEPHEN MURRAY", OBSERVER)
+	   gsub("^GARMIRE .*", "GORDON GARMIRE", OBSERVER)
+
+	   N = split(OBSERVER, O, " ")
+	   if ( N > 2 ) { 
+	       if ( match(OBSERVER, "^[A-Z]\. ") ) {
+		   OBSERVER = substr(OBSERVER, 1, RLENGTH-1) substr(OBSERVER, RLENGTH+1)
+	       }
+	   }
+	   N = split(OBSERVER, O, " ")
+	   if ( N > 2 ) { 
+	       First = O[1]
+
+	       if ( O[N] ~ "II(I)?|JR(\.)?" ) {
+		   Nth = O[N]
+		   N--
+	       } else {
+		   Nth = ""
+	       }
+	       Last = ""
+	       for ( i = 2; i <= N; i++ ) {
+		   Last = Last O[i]
+	       }
+	   } else {
+	       First = O[1]
+	       Last  = O[2]
+	       Nth   = ""
+	   }
+#	   First  = substr(First, 1, 1) tolower(substr(First, 2))
+#	   Last   = substr(Last , 1, 1) tolower(substr(Last , 2))
+
+	   Author = Last "," First " " Nth
+	  '							\

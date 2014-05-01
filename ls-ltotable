@@ -1,0 +1,4 @@
+#!/bin/sh
+#
+
+fldtotable mode link owner group size date:6-8 name
