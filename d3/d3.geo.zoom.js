@@ -56,17 +56,17 @@ function position(projection, point) {
 }
 
 function quaternionFromEuler(euler) {
-  var Î» = .5 * euler[0] * radians,
-      Ï† = .5 * euler[1] * radians,
-      Î³ = .5 * euler[2] * radians,
-      sinÎ» = Math.sin(Î»), cosÎ» = Math.cos(Î»),
-      sinÏ† = Math.sin(Ï†), cosÏ† = Math.cos(Ï†),
-      sinÎ³ = Math.sin(Î³), cosÎ³ = Math.cos(Î³);
+  var λ = .5 * euler[0] * radians,
+      φ = .5 * euler[1] * radians,
+      γ = .5 * euler[2] * radians,
+      sinλ = Math.sin(λ), cosλ = Math.cos(λ),
+      sinφ = Math.sin(φ), cosφ = Math.cos(φ),
+      sinγ = Math.sin(γ), cosγ = Math.cos(γ);
   return [
-    cosÎ» * cosÏ† * cosÎ³ + sinÎ» * sinÏ† * sinÎ³,
-    sinÎ» * cosÏ† * cosÎ³ - cosÎ» * sinÏ† * sinÎ³,
-    cosÎ» * sinÏ† * cosÎ³ + sinÎ» * cosÏ† * sinÎ³,
-    cosÎ» * cosÏ† * sinÎ³ - sinÎ» * sinÏ† * cosÎ³
+    cosλ * cosφ * cosγ + sinλ * sinφ * sinγ,
+    sinλ * cosφ * cosγ - cosλ * sinφ * sinγ,
+    cosλ * sinφ * cosγ + sinλ * cosφ * sinγ,
+    cosλ * cosφ * sinγ - sinλ * sinφ * cosγ
   ];
 }
 
@@ -85,9 +85,9 @@ function rotateBetween(a, b) {
   if (!a || !b) return;
   var axis = cross(a, b),
       norm = Math.sqrt(dot(axis, axis)),
-      halfÎ³ = .5 * Math.acos(Math.max(-1, Math.min(1, dot(a, b)))),
-      k = Math.sin(halfÎ³) / norm;
-  return norm && [Math.cos(halfÎ³), axis[2] * k, -axis[1] * k, axis[0] * k];
+      halfγ = .5 * Math.acos(Math.max(-1, Math.min(1, dot(a, b)))),
+      k = Math.sin(halfγ) / norm;
+  return norm && [Math.cos(halfγ), axis[2] * k, -axis[1] * k, axis[0] * k];
 }
 
 function eulerFromQuaternion(q) {
@@ -99,13 +99,13 @@ function eulerFromQuaternion(q) {
 }
 
 function cartesian(spherical) {
-  var Î» = spherical[0] * radians,
-      Ï† = spherical[1] * radians,
-      cosÏ† = Math.cos(Ï†);
+  var λ = spherical[0] * radians,
+      φ = spherical[1] * radians,
+      cosφ = Math.cos(φ);
   return [
-    cosÏ† * Math.cos(Î»),
-    cosÏ† * Math.sin(Î»),
-    Math.sin(Ï†)
+    cosφ * Math.cos(λ),
+    cosφ * Math.sin(λ),
+    Math.sin(φ)
   ];
 }
 
